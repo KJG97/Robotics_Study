@@ -1,34 +1,68 @@
-# Loading Extension
-To enable this extension, run Isaac Sim with the flags --ext-folder {path_to_ext_folder} --enable {ext_directory_name}
-The user will see the extension appear on the toolbar on startup with the title they specified in the Extension Generator
+# Robotics Study - Python 소스코드
 
+## 📁 파일 구조
 
-# Extension Usage
-This template extension creates a Load, Reset, and Run button in a simple UI.
-The Load and Reset buttons interact with the isaacsim.core.api World() in order
-to simplify user interaction with the simulator and provide certain gurantees to the user
-at the times their callback functions are called.  
+```
+Robotics_Study_python/
+├── extension.py      # 확장 진입점 (Extension 클래스)
+├── ui_builder.py     # 메인 UI 구성
+├── scenario.py       # Chapter2 시나리오 로직
+├── global_variables.py   # 확장 메타데이터 (제목, 설명 등)
+└── assignments/      # Assignment별 모듈
+    └── assignment1/
+        ├── scenario.py   # Assignment1 로직
+        └── ui.py         # Assignment1 UI
+```
 
+---
 
-# Template Code Overview
-The template is well documented and is meant to be self-explanatory to the user should they
-start reading the provided python files.  A short overview is also provided here:
+## 🔧 각 파일 역할
 
-global_variables.py: 
-    A script that stores in global variables that the user specified when creating this extension such as the Title and Description.
+### `extension.py`
+- Isaac Sim 툴바에 확장 등록
+- 메뉴 버튼 클릭 시 UI 창 생성
+- 타임라인/스테이지 이벤트 구독
 
-extension.py:
-    A class containing the standard boilerplate necessary to have the user extension show up on the Toolbar.  This
-    class is meant to fulfill most ues-cases without modification.
-    In extension.py, useful standard callback functions are created that the user may complete in ui_builder.py.
+### `ui_builder.py`
+- **World Controls**: LOAD, RESET 버튼
+- **Run Scenario**: RUN/STOP 토글
+- **Robot Information**: 조인트 상태 실시간 표시
+- **Chapter2 Example**: 7DOF, 2DOF 예제 버튼
 
-ui_builder.py:
-    This file is the user's main entrypoint into the template.  Here, the user can see useful callback functions that have been
-    set up for them, and they may also create UI buttons that are hooked up to more user-defined callback functions.  This file is
-    the most thoroughly documented, and the user should read through it before making serious modification.
+### `scenario.py`
+- `RoboticsStudyScenario` 클래스
+- 7DOF 사인파 궤적 생성 및 End-effector 시각화
+- 2DOF Prismatic 로봇 제어
 
-scenario.py:
-    This file contains an implementation of an example "Scenario" that implements a "teardown", "setup", and "update" function.
-    This particular structure was chosen to make a clear code separation between UI management and the scenario logic.  In this way, the 
-    ExampleScenario() class serves as a simple backend to the UI.  The user should feel encouraged to implement the backend to their UI
-    that best suits their needs.
+### `assignments/assignment1/`
+- `scenario.py`: 포즈 정의, FK 계산, 애니메이션 로직
+- `ui.py`: Assignment1 전용 UI 구성
+
+---
+
+## 🔄 실행 흐름
+
+```
+1. extension.py → UI 창 생성
+2. ui_builder.py → LOAD 버튼 클릭
+3. scenario.py → 로봇 초기화 (setup_scenario)
+4. RUN 버튼 → 매 프레임 update_scenario() 호출
+5. RESET → teardown_scenario() 호출
+```
+
+---
+
+## ➕ 새 Assignment 추가하기
+
+```bash
+# 1. 폴더 생성
+mkdir -p assignments/assignment2
+
+# 2. 파일 생성
+touch assignments/assignment2/__init__.py
+touch assignments/assignment2/scenario.py
+touch assignments/assignment2/ui.py
+
+# 3. assignments/__init__.py에 import 추가
+# 4. ui_builder.py에서 Assignment2UI 사용
+```
