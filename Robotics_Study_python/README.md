@@ -40,29 +40,4 @@ Robotics_Study_python/
 
 ---
 
-## 🔄 실행 흐름
 
-```
-1. extension.py → UI 창 생성
-2. ui_builder.py → LOAD 버튼 클릭
-3. scenario.py → 로봇 초기화 (setup_scenario)
-4. RUN 버튼 → 매 프레임 update_scenario() 호출
-5. RESET → teardown_scenario() 호출
-```
-
----
-
-## ➕ 새 Assignment 추가하기
-
-```bash
-# 1. 폴더 생성
-mkdir -p assignments/assignment2
-
-# 2. 파일 생성
-touch assignments/assignment2/__init__.py
-touch assignments/assignment2/scenario.py
-touch assignments/assignment2/ui.py
-
-# 3. assignments/__init__.py에 import 추가
-# 4. ui_builder.py에서 Assignment2UI 사용
-```
