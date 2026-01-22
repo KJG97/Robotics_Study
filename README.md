@@ -20,7 +20,7 @@ NVIDIA Isaac Sim 환경에서 로보틱스 기초를 학습하기 위한 확장 
 
 2. 리포지토리 클론:
    ```bash
-   git clone https://github.com/KJG97/Robotics_Study.git
+   git clone git@github.com:KJG97/Robotics_Study.git
    ```
 
 3. Isaac Sim 재시작 후 Extensions에서 활성화
