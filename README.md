@@ -57,8 +57,8 @@ Robotics_Study/
 
 ## 🛠️ Requirements
 
-- NVIDIA Isaac Sim 2023.1.0+
-- Python 3.10+
+- NVIDIA Isaac Sim 5.1.0
+- Python 3.11+
 
 ## 📝 License
 
