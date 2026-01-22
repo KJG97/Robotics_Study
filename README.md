@@ -13,11 +13,17 @@ NVIDIA Isaac Sim 환경에서 로보틱스 기초를 학습하기 위한 확장 
 
 ## 🚀 Installation
 
-1. Isaac Sim이 설치되어 있어야 합니다.
-2. 이 폴더를 Isaac Sim의 확장 폴더에 배치합니다:
+1. Isaac Sim의 extsUser 폴더로 이동:
+   ```bash
+   cd {ISAAC_SIM_PATH}/extsUser/
    ```
-   {ISAAC_SIM_PATH}/extsUser/Robotics_Study
+
+2. 리포지토리 클론:
+   ```bash
+   git clone https://github.com/KJG97/Robotics_Study.git
    ```
+
+3. Isaac Sim 재시작 후 Extensions에서 활성화
 
 ## 📖 Usage
 
