@@ -1,0 +1,26 @@
+{
+    "ALLEX": {
+        "left_arm": {
+            "joint_names": [
+                "L_Shoulder_Pitch_Joint",
+                "L_Shoulder_Roll_Joint",
+                "L_Shoulder_Yaw_Joint",
+                "L_Elbow_Joint",
+                "L_Wrist_Yaw_Joint",
+                "L_Wrist_Roll_Joint",
+                "L_Wrist_Pitch_Joint"
+            ]
+        },
+        "right_arm": {
+            "joint_names": [
+                "R_Shoulder_Pitch_Joint",
+                "R_Shoulder_Roll_Joint",
+                "R_Shoulder_Yaw_Joint",
+                "R_Elbow_Joint",
+                "R_Wrist_Yaw_Joint",
+                "R_Wrist_Roll_Joint",
+                "R_Wrist_Pitch_Joint"
+            ]
+        }
+    }
+}
