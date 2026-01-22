@@ -21,13 +21,8 @@ NVIDIA Isaac Sim 환경에서 로보틱스 기초를 학습하기 위한 확장 
 
 ## 📖 Usage
 
-Isaac Sim 실행 시 확장을 활성화합니다:
-
-```bash
-./isaac-sim.sh --ext-folder /path/to/extsUser --enable Robotics_Study
-```
-
-또는 Isaac Sim UI에서:
+Isaac Sim 실행 시 확장을 활성화합니다.
+Isaac Sim UI에서:
 1. Window → Extensions 열기
 2. "Robotics Study" 검색
 3. 활성화 (Enable)
