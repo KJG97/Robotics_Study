@@ -3,11 +3,9 @@
 
 """
 Main UI Builder for Robotics Study Extension
-
-Handles main UI components: World Controls, Run Scenario, Robot Information, Chapter2 Examples.
-Assignment-specific UIs are located in the assignments/ module.
 """
 
+import os
 import numpy as np
 import omni.timeline
 import omni.ui as ui
@@ -23,19 +21,16 @@ from pxr import Sdf, UsdLux
 from .scenario import RoboticsStudyScenario
 from .assignments import Assignment1UI
 
+# Extension root directory (Robotics_Study/)
+_EXT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 
 class UIBuilder:
     """Main UI builder for Robotics Study extension."""
     
-    # Asset paths
-    _ROBOT_USD_PATH = "/home/jkkim/isaac-sim/extsUser/Robotics_Study/asset/ALLEX_Right_Arm.usd"
-    _PRISMATIC_2DOF_USD_PATH = "/home/jkkim/isaac-sim/extsUser/Robotics_Study/asset/prismatic_2dof.usd"
-    _ROBOT_PRIM_PATH = "/ALLEX_Right_Arm"
-    _PRISMATIC_2DOF_PRIM_PATH = "/prismatic_2dof"
-    
-    # UI styles
-    _INFO_WINDOW_BG_COLOR = 0xDD1A1A2E
-    _INFO_WINDOW_BORDER_COLOR = 0xFF00D4FF
+    # Asset paths (relative to extension root)
+    ROBOT_USD = os.path.join(_EXT_ROOT, "asset", "ALLEX_Right_Arm.usd")
+    PRISMATIC_2DOF_USD = os.path.join(_EXT_ROOT, "asset", "prismatic_2dof.usd")
 
     def __init__(self):
         self.frames = []
@@ -45,52 +40,61 @@ class UIBuilder:
         self._scenario = RoboticsStudyScenario()
         self._assignment1_ui = Assignment1UI()
         
-        # UI state
+        # State
         self._articulation = None
-        self._info_overlay_window = None
+        self._info_window = None
         self._info_label = None
-        self._current_display_mode = None
-        self._prismatic_2dof_loaded = False
+        self._show_info = False
+        self._prismatic_loaded = False
         
-        # UI element references
+        # UI elements
         self._example3_btn = None
         self._example4_btn = None
 
     # ========================================
-    # Extension Callbacks (called by extension.py)
+    # Extension Callbacks
     # ========================================
 
     def on_menu_callback(self):
-        """Callback when UI is opened from toolbar."""
         pass
 
     def on_timeline_event(self, event):
-        """Handle timeline events (Play, Pause, Stop)."""
         if event.type == int(omni.timeline.TimelineEventType.STOP):
             self._scenario_state_btn.reset()
             self._scenario_state_btn.enabled = False
 
     def on_physics_step(self, step: float):
-        """Physics step callback."""
         self._assignment1_ui.update_animation(step)
 
     def on_stage_event(self, event):
-        """Handle stage events."""
         if event.type == int(StageEventType.OPENED):
-            self._reset_extension()
+            # Reset all state
+            self._scenario.teardown_scenario()
+            self._show_info = False
+            if self._info_window:
+                self._info_window.visible = False
+            self._articulation = None
+            self._prismatic_loaded = False
+            
+            # Reset UI
+            self._scenario_state_btn.reset()
+            self._scenario_state_btn.enabled = False
+            self._reset_btn.enabled = False
+            if self._example3_btn:
+                self._example3_btn.text = "Example3: 7DOF Manipulator [START]"
+            if self._example4_btn:
+                self._example4_btn.text = "Example4: 2DOF Prismatic [START]"
 
     def cleanup(self):
-        """Clean up resources when stage closes or extension reloads."""
         self._scenario.teardown_scenario()
         self._assignment1_ui.cleanup()
         
-        if self._info_overlay_window:
-            self._info_overlay_window.visible = False
-            self._info_overlay_window = None
-            self._info_label = None
+        if self._info_window:
+            self._info_window.visible = False
+            self._info_window = None
         
-        for ui_elem in self.wrapped_ui_elements:
-            ui_elem.cleanup()
+        for elem in self.wrapped_ui_elements:
+            elem.cleanup()
 
     # ========================================
     # Main UI Build
@@ -98,13 +102,7 @@ class UIBuilder:
 
     def build_ui(self):
         """Build the main extension UI."""
-        self._build_world_controls_frame()
-        self._build_run_scenario_frame()
-        self._build_robot_info_frame()
-        self._build_chapter2_frame()
-
-    def _build_world_controls_frame(self):
-        """Build World Controls collapsable frame."""
+        # World Controls
         with CollapsableFrame("World Controls", collapsed=False):
             with ui.VStack(style=get_style(), spacing=5, height=0):
                 self._load_btn = LoadButton(
@@ -123,8 +121,7 @@ class UIBuilder:
                 self._reset_btn.enabled = False
                 self.wrapped_ui_elements.append(self._reset_btn)
 
-    def _build_run_scenario_frame(self):
-        """Build Run Scenario collapsable frame."""
+        # Run Scenario
         with CollapsableFrame("Run Scenario", collapsed=False):
             with ui.VStack(style=get_style(), spacing=5, height=0):
                 self._scenario_state_btn = StateButton(
@@ -136,25 +133,21 @@ class UIBuilder:
                 self._scenario_state_btn.enabled = False
                 self.wrapped_ui_elements.append(self._scenario_state_btn)
 
-    def _build_robot_info_frame(self):
-        """Build Robot Information collapsable frame."""
+        # Robot Information
         with CollapsableFrame("Robot Information", collapsed=False):
             with ui.VStack(style=get_style(), spacing=5, height=0):
-                ui.Button("Robot Info", height=30, clicked_fn=self._on_show_all_states)
-                ui.Button("Close Info Window", height=25, clicked_fn=self._on_close_info_window)
+                ui.Button("Robot Info", height=30, clicked_fn=self._on_show_info)
+                ui.Button("Close Info Window", height=25, clicked_fn=self._on_close_info)
 
-    def _build_chapter2_frame(self):
-        """Build Chapter2 Example collapsable frame."""
+        # Chapter2 Examples
         with CollapsableFrame("Chapter2 Example", collapsed=False):
             with ui.VStack(style=get_style(), spacing=5, height=0):
                 self._example3_btn = ui.Button(
-                    "Example3: 7DOF Manipulator [START]",
-                    height=30,
+                    "Example3: 7DOF Manipulator [START]", height=30,
                     clicked_fn=self._on_example3_toggle
                 )
                 self._example4_btn = ui.Button(
-                    "Example4: 2DOF Prismatic [START]",
-                    height=30,
+                    "Example4: 2DOF Prismatic [START]", height=30,
                     clicked_fn=self._on_example4_toggle
                 )
 
@@ -162,18 +155,16 @@ class UIBuilder:
     # Scene Setup
     # ========================================
 
-    def _add_light_to_stage(self):
-        """Add dome light to the stage."""
-        dome_light = UsdLux.DomeLight.Define(get_current_stage(), Sdf.Path("/World/DomeLight"))
-        dome_light.CreateIntensityAttr(1000)
-
     def _setup_scene(self):
         """Setup scene with robot."""
         create_new_stage()
-        self._add_light_to_stage()
-        add_reference_to_stage(self._ROBOT_USD_PATH, self._ROBOT_PRIM_PATH)
         
-        self._articulation = SingleArticulation(self._ROBOT_PRIM_PATH)
+        # Add dome light
+        UsdLux.DomeLight.Define(get_current_stage(), Sdf.Path("/World/DomeLight")).CreateIntensityAttr(1000)
+        
+        # Load robot
+        add_reference_to_stage(self.ROBOT_USD, "/World/ALLEX_Right_Arm")
+        self._articulation = SingleArticulation("/World/ALLEX_Right_Arm")
         World.instance().scene.add(self._articulation)
 
     def _setup_post_load(self):
@@ -185,15 +176,16 @@ class UIBuilder:
 
     def _on_post_reset(self):
         """Post-reset callback."""
-        # Stop active trajectories
         if self._scenario.is_trajectory_active():
             self._scenario.stop_7dof_trajectory()
         if self._scenario.is_2dof_trajectory_active():
             self._scenario.stop_2dof_trajectory()
         
-        # Reset button texts
-        self._update_example_button_texts(reset=True)
-        self._prismatic_2dof_loaded = False
+        if self._example3_btn:
+            self._example3_btn.text = "Example3: 7DOF Manipulator [START]"
+        if self._example4_btn:
+            self._example4_btn.text = "Example4: 2DOF Prismatic [START]"
+        self._prismatic_loaded = False
         
         self._scenario_state_btn.reset()
         self._scenario_state_btn.enabled = True
@@ -202,81 +194,52 @@ class UIBuilder:
         """Update scenario and info display."""
         self._scenario.update_scenario(step)
         
-        if self._current_display_mode == "all_states" and self._info_label:
-            self._display_all_states()
-
-    def _reset_extension(self):
-        """Reset extension state when new stage opens."""
-        self._scenario.teardown_scenario()
-        self._on_close_info_window()
-        self._articulation = None
-        self._prismatic_2dof_loaded = False
-        self._current_display_mode = None
-        self._reset_ui()
-
-    def _reset_ui(self):
-        """Reset UI elements to default state."""
-        self._scenario_state_btn.reset()
-        self._scenario_state_btn.enabled = False
-        self._reset_btn.enabled = False
-        self._update_example_button_texts(reset=True)
-
-    def _update_example_button_texts(self, reset=False):
-        """Update example button texts."""
-        if self._example3_btn:
-            self._example3_btn.text = "Example3: 7DOF Manipulator [START]"
-        if self._example4_btn:
-            self._example4_btn.text = "Example4: 2DOF Prismatic [START]"
-        if reset:
-            self._prismatic_2dof_loaded = False
+        if self._show_info and self._info_label:
+            self._display_joint_states()
 
     # ========================================
     # Robot Info Display
     # ========================================
     
-    def _create_info_overlay_window(self):
-        """Create info overlay window if not exists."""
-        if self._info_overlay_window:
-            return
+    def _on_show_info(self):
+        """Show joint states info window."""
+        self._show_info = True
         
-        self._info_overlay_window = ui.Window(
-            "Robot Info", width=350, height=450,
-            flags=ui.WINDOW_FLAGS_NO_RESIZE | ui.WINDOW_FLAGS_NO_SCROLLBAR,
-            position_x=20, position_y=100
-        )
+        # Create window if needed
+        if not self._info_window:
+            self._info_window = ui.Window(
+                "Robot Info", width=350, height=450,
+                flags=ui.WINDOW_FLAGS_NO_RESIZE | ui.WINDOW_FLAGS_NO_SCROLLBAR,
+                position_x=20, position_y=100
+            )
+            with self._info_window.frame:
+                with ui.ZStack():
+                    ui.Rectangle(style={
+                        "background_color": 0xDD1A1A2E,
+                        "border_radius": 10,
+                        "border_width": 2,
+                        "border_color": 0xFF00D4FF
+                    })
+                    with ui.VStack(spacing=5):
+                        ui.Spacer(height=10)
+                        self._info_label = ui.Label(
+                            "Loading...",
+                            alignment=ui.Alignment.LEFT_TOP,
+                            word_wrap=True,
+                            style={"color": 0xFFFFFFFF, "font_size": 14, "margin": 15}
+                        )
+                        ui.Spacer(height=10)
         
-        with self._info_overlay_window.frame:
-            with ui.ZStack():
-                ui.Rectangle(style={
-                    "background_color": self._INFO_WINDOW_BG_COLOR,
-                    "border_radius": 10,
-                    "border_width": 2,
-                    "border_color": self._INFO_WINDOW_BORDER_COLOR
-                })
-                with ui.VStack(spacing=5):
-                    ui.Spacer(height=10)
-                    self._info_label = ui.Label(
-                        "Loading robot info...",
-                        alignment=ui.Alignment.LEFT_TOP,
-                        word_wrap=True,
-                        style={"color": 0xFFFFFFFF, "font_size": 14, "margin": 15}
-                    )
-                    ui.Spacer(height=10)
+        self._display_joint_states()
+        self._info_window.visible = True
     
-    def _on_show_all_states(self):
-        """Show all joint states in realtime."""
-        self._current_display_mode = "all_states"
-        self._create_info_overlay_window()
-        self._display_all_states()
-        self._info_overlay_window.visible = True
-    
-    def _on_close_info_window(self):
+    def _on_close_info(self):
         """Close info window."""
-        self._current_display_mode = None
-        if self._info_overlay_window:
-            self._info_overlay_window.visible = False
+        self._show_info = False
+        if self._info_window:
+            self._info_window.visible = False
     
-    def _display_all_states(self):
+    def _display_joint_states(self):
         """Display all joint states."""
         if not self._info_label:
             return
@@ -287,24 +250,17 @@ class UIBuilder:
             self._info_label.text = f"[ERROR] {info['error']}"
             return
         
-        # Build display text
         lines = [
             "[ALL JOINT STATES - Realtime]",
-            "=" * 35,
-            "",
+            "=" * 35, "",
             f"{'Joint':<12} {'Pos(rad)':>10} {'Vel(rad/s)':>10} {'Torque(Nm)':>10}",
             "-" * 45,
         ]
         
-        names = info['dof_names']
-        positions = info['positions']
-        velocities = info['velocities']
-        torques = info['torques']
-        
-        for i, name in enumerate(names):
-            pos = positions[i] if i < len(positions) else 0
-            vel = velocities[i] if i < len(velocities) else 0
-            torque = torques[i] if i < len(torques) else 0
+        for i, name in enumerate(info['dof_names']):
+            pos = info['positions'][i] if i < len(info['positions']) else 0
+            vel = info['velocities'][i] if i < len(info['velocities']) else 0
+            torque = info['torques'][i] if i < len(info['torques']) else 0
             lines.append(f"{name[:10]:<12} {pos:>10.3f} {vel:>10.3f} {torque:>10.3f}")
         
         self._info_label.text = "\n".join(lines)
@@ -329,32 +285,27 @@ class UIBuilder:
             self._scenario.stop_2dof_trajectory()
             self._example4_btn.text = "Example4: 2DOF Prismatic [START]"
         else:
-            if not self._prismatic_2dof_loaded:
-                self._load_prismatic_2dof()
-                self._prismatic_2dof_loaded = True
+            # Load robot if not loaded
+            if not self._prismatic_loaded:
+                try:
+                    if get_current_stage() is None:
+                        print("[Example4] Error: No stage available.")
+                        return
+                    
+                    add_reference_to_stage(self.PRISMATIC_2DOF_USD, "/prismatic_2dof")
+                    XFormPrim("/prismatic_2dof").set_world_poses(positions=np.array([[0.0, 1.0, 0.0]]))
+                    print("[Example4] Loaded: /prismatic_2dof at (0, 1, 0)")
+                    self._prismatic_loaded = True
+                except Exception as e:
+                    print(f"[Example4] Failed to load robot: {e}")
+                    return
             
             self._scenario.start_2dof_trajectory()
             self._example4_btn.text = "Example4: 2DOF Prismatic [RESET]"
             self._timeline.play()
-    
-    def _load_prismatic_2dof(self):
-        """Load 2DOF Prismatic robot to stage."""
-        try:
-            if get_current_stage() is None:
-                print("[Example4] Error: No stage available.")
-                return
-            
-            add_reference_to_stage(self._PRISMATIC_2DOF_USD_PATH, self._PRISMATIC_2DOF_PRIM_PATH)
-            
-            prim = XFormPrim(self._PRISMATIC_2DOF_PRIM_PATH)
-            prim.set_world_poses(positions=np.array([[0.0, 1.0, 0.0]]))
-            
-            print(f"[Example4] Loaded: {self._PRISMATIC_2DOF_PRIM_PATH} at (0, 1, 0)")
-        except Exception as e:
-            print(f"[Example4] Failed to load robot: {e}")
 
     # ========================================
-    # Assignment UI Delegation
+    # Assignment UI
     # ========================================
     
     def build_assignment1_ui(self, window):

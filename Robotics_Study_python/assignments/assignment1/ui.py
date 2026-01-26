@@ -3,10 +3,9 @@
 
 """
 Assignment1 UI: ALLEX Robot Forward Kinematics
-
-UI components for robot loading, pose selection, animation control, and FK display.
 """
 
+import os
 import omni.timeline
 import omni.ui as ui
 from isaacsim.core.api.world import World
@@ -18,20 +17,15 @@ from pxr import Sdf, UsdLux
 
 from .scenario import Assignment1Scenario
 
+# Extension root directory (Robotics_Study/)
+_EXT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
 
 class Assignment1UI:
-    """Assignment1 UI Builder - Handles all UI components and callbacks"""
+    """Assignment1 UI Builder"""
     
-    # Configuration
-    ROBOT_USD_PATH = "/home/jkkim/isaac-sim/extsUser/Robotics_Study/asset/ALLEX.usd"
-    ROBOT_PRIM_PATH = "/ALLEX"
-    
-    # Pose button configurations
-    POSES = [
-        ("pose1", "Pose 1 (Zero)"),
-        ("pose2", "Pose 2 (Symmetric)"),
-        ("pose3", "Pose 3 (Asymmetric)")
-    ]
+    ROBOT_USD = os.path.join(_EXT_ROOT, "asset", "ALLEX.usd")
+    ROBOT_PRIM = "/ALLEX"
     
     def __init__(self):
         self._timeline = omni.timeline.get_timeline_interface()
@@ -63,8 +57,9 @@ class Assignment1UI:
                 
                 # Pose buttons
                 with ui.HStack(spacing=5, height=30):
-                    for pose_id, label in self.POSES:
-                        ui.Button(label, clicked_fn=lambda p=pose_id: self._on_pose_clicked(p))
+                    ui.Button("Pose 1 (Zero)", clicked_fn=lambda: self._on_pose_clicked("pose1"))
+                    ui.Button("Pose 2 (Symmetric)", clicked_fn=lambda: self._on_pose_clicked("pose2"))
+                    ui.Button("Pose 3 (Asymmetric)", clicked_fn=lambda: self._on_pose_clicked("pose3"))
                 
                 ui.Spacer(height=10)
                 ui.Label("Animation (Pose 1 -> 2 -> 3 -> repeat):", height=20)
@@ -88,62 +83,57 @@ class Assignment1UI:
     def _setup_scene(self):
         """Setup scene - load ALLEX robot"""
         create_new_stage()
-        
-        # Add light
         UsdLux.DomeLight.Define(get_current_stage(), Sdf.Path("/World/DomeLight")).CreateIntensityAttr(1000)
         
-        # Load robot
-        add_reference_to_stage(self.ROBOT_USD_PATH, self.ROBOT_PRIM_PATH)
-        self._articulation = SingleArticulation(self.ROBOT_PRIM_PATH)
+        add_reference_to_stage(self.ROBOT_USD, self.ROBOT_PRIM)
+        self._articulation = SingleArticulation(self.ROBOT_PRIM) 
         World.instance().scene.add(self._articulation)
-        
         print("[Assignment1] ALLEX robot loaded")
     
     def _post_load(self):
-        """Post-load callback - setup gravity and scenario"""
-        # Zero gravity for kinematic study
+        """Post-load callback"""
         World.instance().get_physics_context().set_gravity(value=0.0)
         print("[Assignment1] Gravity: 0")
         
         if self._articulation:
             self._scenario.setup(self._articulation)
-            self._update_label("Robot loaded! Click a pose button.")
+            if self._fk_label:
+                self._fk_label.text = "Robot loaded! Click a pose button."
     
     def _on_pose_clicked(self, pose_name: str):
         """Handle pose button click"""
         if not self._articulation:
-            self._update_label("[ERROR] Robot not loaded. Click LOAD ALLEX first.")
+            if self._fk_label:
+                self._fk_label.text = "[ERROR] Robot not loaded. Click LOAD ALLEX first."
             return
         
-        result = self._scenario.apply_pose(pose_name)
-        result_str = self._scenario.get_fk_result_string(result)
-        self._update_label(result_str)
+        result_str = self._scenario.apply_pose_and_get_result(pose_name)
+        if self._fk_label:
+            self._fk_label.text = result_str
         print(result_str)
     
     def _on_animation_toggle(self):
         """Toggle animation Start/Stop"""
         if not self._articulation:
-            self._update_label("[ERROR] Robot not loaded. Click LOAD ALLEX first.")
+            if self._fk_label:
+                self._fk_label.text = "[ERROR] Robot not loaded. Click LOAD ALLEX first."
             return
         
         if self._scenario.is_animation_active():
             self._scenario.stop_animation()
             self._anim_btn.text = "Animation [START]"
-            self._update_label("Animation stopped. Returned to Pose 1.")
+            if self._fk_label:
+                self._fk_label.text = "Animation stopped. Returned to Pose 1."
         else:
             self._scenario.start_animation()
             self._anim_btn.text = "Animation [STOP]"
-            self._update_label(
-                "Animation running...\n"
-                "Pose 1 -> 2 -> 3 -> repeat\n\n"
-                "Trajectory:\n  Blue = Left Hand\n  Red = Right Hand"
-            )
+            if self._fk_label:
+                self._fk_label.text = (
+                    "Animation running...\n"
+                    "Pose 1 -> 2 -> 3 -> repeat\n\n"
+                    "Trajectory:\n  Blue = Left Hand\n  Red = Right Hand"
+                )
             self._timeline.play()
-    
-    def _update_label(self, text: str):
-        """Update FK result label"""
-        if self._fk_label:
-            self._fk_label.text = text
     
     def update_animation(self, step: float):
         """Update animation (called from physics step)"""
