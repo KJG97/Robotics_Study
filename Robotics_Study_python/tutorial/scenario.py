@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Robotics Study Scenario - Chapter2 Examples
-7DOF Manipulator, 2DOF Prismatic robot trajectory control.
+Tutorial Scenario - Chapter2 Examples
+7DOF Manipulator and 2DOF Prismatic robot trajectory control.
 """
 
 import numpy as np
@@ -11,12 +11,11 @@ from isaacsim.core.utils.types import ArticulationAction
 from pxr import UsdGeom
 
 
-class RoboticsStudyScenario:
-    """Main scenario class for robotics study examples."""
+class TutorialScenario:
+    """Scenario class for Chapter2 tutorial examples."""
 
     def __init__(self):
         self._articulation = None
-        self._time = 0.0
         
         # 7DOF trajectory state
         self._trajectory_active = False
@@ -27,37 +26,37 @@ class RoboticsStudyScenario:
         self._2dof_trajectory_time = 0.0
         self._2dof_articulation = None
 
-    def setup_scenario(self, articulation):
+    def setup(self, articulation):
         """Initialize scenario with robot articulation."""
         self._articulation = articulation
-        self._time = 0.0
         
         if self._articulation:
             print("=" * 50)
-            print("[OK] Robotics Study Scenario Setup Complete!")
+            print("[Tutorial] Scenario Setup Complete!")
             print(f"   DOF Count: {self._articulation.num_dof}")
             print(f"   Body Count: {self._articulation.num_bodies}")
             print("=" * 50)
 
-    def teardown_scenario(self):
+    def teardown(self):
         """Clean up scenario resources."""
         self._articulation = None
-        self._time = 0.0
         self._trajectory_active = False
         self._trajectory_time = 0.0
         self._2dof_trajectory_active = False
         self._2dof_trajectory_time = 0.0
         self._2dof_articulation = None
 
-    def update_scenario(self, step: float):
+    def update(self, step: float):
         """Update scenario each physics step."""
-        self._time += step
-        
         if self._trajectory_active:
             self._update_7dof_trajectory(step)
         
         if self._2dof_trajectory_active:
             self._update_2dof_trajectory(step)
+
+    # ========================================
+    # Robot Info
+    # ========================================
 
     def get_all_joint_states(self) -> dict:
         """Get all joint states (position, velocity, torque)."""
@@ -88,11 +87,7 @@ class RoboticsStudyScenario:
         self._trajectory_time = 0.0
         
         # Clear debug draw
-        try:
-            from isaacsim.util.debug_draw import _debug_draw
-            _debug_draw.acquire_debug_draw_interface().clear_points()
-        except Exception:
-            pass
+        self._clear_debug_draw()
         
         print("[Example3] 7DOF trajectory started! Period: 2.0s")
     
@@ -104,15 +99,12 @@ class RoboticsStudyScenario:
             self._articulation.apply_action(ArticulationAction(joint_positions=np.zeros(7)))
         
         # Clear debug draw
-        try:
-            from isaacsim.util.debug_draw import _debug_draw
-            _debug_draw.acquire_debug_draw_interface().clear_points()
-        except Exception:
-            pass
+        self._clear_debug_draw()
         
         print("[Example3] 7DOF trajectory stopped.")
     
     def is_trajectory_active(self) -> bool:
+        """Check if 7DOF trajectory is active."""
         return self._trajectory_active
     
     def _update_7dof_trajectory(self, step: float):
@@ -138,6 +130,10 @@ class RoboticsStudyScenario:
         self._articulation.apply_action(ArticulationAction(joint_positions=q))
         
         # Draw end-effector point
+        self._draw_end_effector_point()
+
+    def _draw_end_effector_point(self):
+        """Draw end-effector position for trajectory visualization."""
         try:
             from isaacsim.core.utils.stage import get_current_stage
             from isaacsim.util.debug_draw import _debug_draw
@@ -156,6 +152,14 @@ class RoboticsStudyScenario:
             
             draw = _debug_draw.acquire_debug_draw_interface()
             draw.draw_points([pos], [(1.0, 0.0, 0.0, 1.0)], [5])
+        except Exception:
+            pass
+
+    def _clear_debug_draw(self):
+        """Clear debug draw points."""
+        try:
+            from isaacsim.util.debug_draw import _debug_draw
+            _debug_draw.acquire_debug_draw_interface().clear_points()
         except Exception:
             pass
 
@@ -202,6 +206,7 @@ class RoboticsStudyScenario:
         print("[Example4] 2DOF trajectory stopped.")
     
     def is_2dof_trajectory_active(self) -> bool:
+        """Check if 2DOF trajectory is active."""
         return self._2dof_trajectory_active
     
     def _update_2dof_trajectory(self, step: float):
@@ -222,3 +227,4 @@ class RoboticsStudyScenario:
             self._2dof_articulation.apply_action(ArticulationAction(joint_positions=q))
         except Exception:
             pass
+
