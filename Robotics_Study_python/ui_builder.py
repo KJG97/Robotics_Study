@@ -19,6 +19,7 @@ from .assignments import Assignment1UI
 from .tutorial import TutorialUI
 from .forward import ForwardKinematicsUI
 from .inverse import InverseKinematicsUI
+from .trajectory_generation import TrajectoryGenerationUI
 
 _EXT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -37,6 +38,7 @@ class UIBuilder:
         self._tutorial_ui = TutorialUI()
         self._forward_ui = ForwardKinematicsUI()
         self._inverse_ui = InverseKinematicsUI()
+        self._trajgen_ui = TrajectoryGenerationUI()
         
         self._articulation = None
 
@@ -59,6 +61,7 @@ class UIBuilder:
             self._tutorial_ui.on_stage_opened()
             self._forward_ui.on_stage_opened()
             self._inverse_ui.on_stage_opened()
+            self._trajgen_ui.on_stage_opened()
             self._articulation = None
             
             self._scenario_state_btn.reset()
@@ -70,6 +73,7 @@ class UIBuilder:
         self._tutorial_ui.teardown()
         self._forward_ui.teardown()
         self._inverse_ui.teardown()
+        self._trajgen_ui.teardown()
         
         for elem in self.wrapped_ui_elements:
             elem.cleanup()
@@ -118,6 +122,9 @@ class UIBuilder:
         
         # Inverse Kinematics UI
         self._inverse_ui.build_ui()
+        
+        # Trajectory Generation UI
+        self._trajgen_ui.build_ui()
 
     # ─────────────────────────────────────────────────────────────────────────
     # Scene Setup
@@ -136,6 +143,7 @@ class UIBuilder:
         self._tutorial_ui.setup(self._articulation)
         self._forward_ui.setup(self._articulation)
         self._inverse_ui.setup(self._articulation)
+        self._trajgen_ui.setup(self._articulation)
         
         self._scenario_state_btn.reset()
         self._scenario_state_btn.enabled = True
@@ -148,6 +156,7 @@ class UIBuilder:
         self._tutorial_ui.reset()
         self._forward_ui.reset()
         self._inverse_ui.reset()
+        self._trajgen_ui.reset()
         
         self._scenario_state_btn.reset()
         self._scenario_state_btn.enabled = True

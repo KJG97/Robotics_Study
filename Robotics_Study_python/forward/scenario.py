@@ -5,7 +5,7 @@
 
 import os
 import numpy as np
-from isaacsim.robot_motion.motion_generation import ArticulationKinematicsSolver, LulaKinematicsSolver
+from isaacsim.robot_motion.motion_generation import LulaKinematicsSolver
 
 _EXT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -46,7 +46,6 @@ class ForwardKinematicsScenario:
             self._solver = LulaKinematicsSolver(
                 robot_description_path=self.ROBOT_DESC_PATH, urdf_path=self.URDF_PATH
             )
-            ArticulationKinematicsSolver(articulation, self._solver, self.EE_FRAME)
             print(f"[FK] Ready - DOF: {self._num_dof}, EE: {self.EE_FRAME}")
         except Exception as e:
             print(f"[FK] Solver init failed: {e}")
