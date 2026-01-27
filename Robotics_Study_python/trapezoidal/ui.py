@@ -11,7 +11,7 @@ from isaacsim.core.api.world import World
 from .scenario import TrajectoryGenerationScenario
 
 
-class TrajectoryGenerationUI:
+class TrapezoidalUI:
     """UI for single joint trajectory generation."""
 
     PLOT_SAMPLES = 100

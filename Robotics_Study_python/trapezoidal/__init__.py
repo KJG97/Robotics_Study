@@ -6,7 +6,7 @@ Trajectory Generation module for Robotics Study Extension
 Trapezoidal velocity profile based trajectory planning
 """
 
-from .ui import TrajectoryGenerationUI
+from .ui import TrapezoidalUI
 from .scenario import TrajectoryGenerationScenario
 
-__all__ = ["TrajectoryGenerationUI", "TrajectoryGenerationScenario"]
+__all__ = ["TrapezoidalUI", "TrajectoryGenerationScenario"]

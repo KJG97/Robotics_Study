@@ -77,7 +77,6 @@ class TrapezoidalProfile:
     def duration(self) -> float:
         return self.tf
 
-
 class TrajectoryGenerationScenario:
     """Single joint trajectory generation using trapezoidal profile."""
     
