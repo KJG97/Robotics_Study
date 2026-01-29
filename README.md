@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
 
 <p align="center">
-  <img src="data/allex.jpeg" alt="ALLEX Robot in Isaac Sim" width="600"/>
+  <img src="data/allex.png" alt="ALLEX Robot in Isaac Sim" width="600"/>
 </p>
 
 [Features](#-features) •
@@ -87,7 +87,7 @@
 
 ### 사전 요구사항
 
-- NVIDIA Isaac Sim **4.5.0** 이상
+- NVIDIA Isaac Sim **5.1.0** 이상
 - Python **3.11** 이상
 - NVIDIA GPU (RTX 권장)
 
@@ -98,12 +98,11 @@
 cd {ISAAC_SIM_PATH}/extsUser/
 
 # 2. 리포지토리 클론
-git clone https://github.com/KJG97/Robotics_Study.git
+git clone git@github.com:KJG97/Robotics_Study.git
 
 # 3. Isaac Sim 재시작
 ```
 
-> 💡 `{ISAAC_SIM_PATH}`는 일반적으로 `~/.local/share/ov/pkg/isaac-sim-4.5.0` 입니다.
 
 ---
 
@@ -234,18 +233,6 @@ Robotics_Study/
 - [Peter Corke's Robotics Toolbox](https://petercorke.com/toolboxes/robotics-toolbox/)
 - [NVIDIA Isaac Sim Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/)
 - [Robotics, Vision and Control (Book)](https://petercorke.com/rvc/)
-
----
-
-## 🤝 Contributing
-
-기여를 환영합니다! 다음 방법으로 참여할 수 있습니다:
-
-1. 이 저장소를 Fork 합니다
-2. Feature 브랜치를 생성합니다 (`git checkout -b feature/AmazingFeature`)
-3. 변경사항을 커밋합니다 (`git commit -m 'Add some AmazingFeature'`)
-4. 브랜치에 Push 합니다 (`git push origin feature/AmazingFeature`)
-5. Pull Request를 생성합니다
 
 ---
 
