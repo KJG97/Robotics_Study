@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue?style=for-the-badge)](LICENSE)
 
 <p align="center">
-  <img src="data/preview.png" alt="Robotics Study Preview" width="600"/>
+  <img src="data/allex.jpeg" alt="ALLEX Robot in Isaac Sim" width="600"/>
 </p>
 
 [Features](#-features) •
