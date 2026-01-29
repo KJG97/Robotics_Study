@@ -43,9 +43,10 @@ class OrientationTrajectoryUI:
     def reset(self):
         self._scenario.stop_execution()
         self._remove_physics_callback()
-        for key in ["euler_btn", "aa_btn", "quat_btn"]:
+        for key in ["euler_btn", "aa_btn", "quat_btn", "ht_btn"]:
             if btn := self._ui.get(key):
-                btn.text, btn.set_style({"background_color": 0xFF006600})
+                btn.text = "Execute"
+                btn.set_style({"background_color": 0xFF006600})
         self._set_status("Ready")
 
     def on_stage_opened(self):
@@ -77,7 +78,7 @@ class OrientationTrajectoryUI:
         self._window.visible = True
 
     def _create_window(self):
-        self._window = ui.Window("Orientation Trajectory", width=400, height=400)
+        self._window = ui.Window("Orientation Trajectory", width=420, height=520)
         
         # Styles
         S = {
@@ -182,6 +183,52 @@ class OrientationTrajectoryUI:
                             self._ui["quat_btn"] = btn("Execute", 70, 0xFF006600, lambda: self._on_execute("quaternion"))
                             ui.Spacer()
                         ui.Label("linspace(const) | jtraj(S-curve,n) | ctraj(trap)", height=14, style=S["info"])
+                
+                # ═══════════════════════════════════════════════════════════════
+                # HT (Homogeneous Transform) - Position + Orientation
+                # ═══════════════════════════════════════════════════════════════
+                with ui.CollapsableFrame("4. HT (Position + Orientation)", collapsed=False):
+                    with ui.VStack(spacing=2, style={"margin": 3}):
+                        # T1 input
+                        with ui.HStack(height=22, spacing=2):
+                            ui.Label("T1: p(", width=35, style=S["label"])
+                            field("t1_px", 1.0, 35)
+                            field("t1_py", 0.0, 35)
+                            field("t1_pz", 0.0, 35)
+                            ui.Label(") r(", width=22, style=S["label"])
+                            field("t1_rx", -90.0, 35)
+                            field("t1_ry", 0.0, 35)
+                            field("t1_rz", 0.0, 35)
+                            ui.Label(")", width=8, style=S["label"])
+                            ui.Spacer()
+                        
+                        # T2 input
+                        with ui.HStack(height=22, spacing=2):
+                            ui.Label("T2: p(", width=35, style=S["label"])
+                            field("t2_px", 0.0, 35)
+                            field("t2_py", 0.5, 35)
+                            field("t2_pz", 1.0, 35)
+                            ui.Label(") r(", width=22, style=S["label"])
+                            field("t2_rx", 0.0, 35)
+                            field("t2_ry", -45.0, 35)
+                            field("t2_rz", 0.0, 35)
+                            ui.Label(")", width=8, style=S["label"])
+                            ui.Spacer()
+                        
+                        # Current state display
+                        with ui.HStack(height=20, spacing=4):
+                            label("ht_pos", "pos=(0,0,0)", 120, S["cyan"])
+                            label("ht_rpy", "rpy=(0,0,0)", 140, S["yellow"])
+                            ui.Spacer()
+                        
+                        # Buttons
+                        with ui.HStack(height=26, spacing=3):
+                            btn("Spawn HT", 65, 0xFF006688, self._on_spawn_ht)
+                            btn("ctraj", 50, 0xFF558855, lambda: self._on_ht("ctraj"))
+                            btn("jtraj", 50, 0xFF885555, lambda: self._on_ht("jtraj"))
+                            self._ui["ht_btn"] = btn("Execute", 70, 0xFF006600, lambda: self._on_execute("ht"))
+                            ui.Spacer()
+                        ui.Label("ctraj: trinterp(T1,T2,s) with trapezoidal s", height=14, style=S["info"])
 
     # ─────────────────────────────────────────────────────────────────────────
     # Event Handlers
@@ -236,8 +283,37 @@ class OrientationTrajectoryUI:
             info = {"linspace": "const vel", "jtraj": f"n={self._val('n'):.1f}", "ctraj": "trapezoid"}
             self._set_status(f"[Quaternion] {interp} ({info[interp]})")
 
+    def _sync_ht_params(self):
+        """Sync T1/T2 from UI to scenario."""
+        self._scenario.set_T1(self._val("t1_px"), self._val("t1_py"), self._val("t1_pz"),
+                              self._val("t1_rx"), self._val("t1_ry"), self._val("t1_rz"))
+        self._scenario.set_T2(self._val("t2_px"), self._val("t2_py"), self._val("t2_pz"),
+                              self._val("t2_rx"), self._val("t2_ry"), self._val("t2_rz"))
+
+    def _on_spawn_ht(self):
+        """Spawn XYZ at T1 position/orientation."""
+        self._sync_ht_params()
+        if self._scenario.spawn_xyz():
+            self._scenario._apply_transform(self._scenario.get_T1())
+            self._update_ht_labels()
+            p = self._scenario.t2p(self._scenario.get_T1())
+            self._set_status(f"Spawned at T1: p=({p[0]:.1f},{p[1]:.1f},{p[2]:.1f})")
+        else:
+            self._set_status("Failed to spawn XYZ.usd")
+
+    def _on_ht(self, interp: str):
+        """Generate HT trajectory."""
+        if not self._scenario._xyz_prim:
+            self._set_status("Spawn HT first!")
+            return
+        self._sync_ht_params()
+        if self._scenario.generate_ht_trajectory(self._val("tf"), interp, self._val("n"))["success"]:
+            self._update_ht_labels()
+            info = {"ctraj": "trapezoidal", "jtraj": f"S-curve n={self._val('n'):.1f}"}
+            self._set_status(f"[HT] {interp} ({info.get(interp, '')})")
+
     def _on_execute(self, mode: str):
-        btn_key = {"euler": "euler_btn", "angle_axis": "aa_btn", "quaternion": "quat_btn"}[mode]
+        btn_key = {"euler": "euler_btn", "angle_axis": "aa_btn", "quaternion": "quat_btn", "ht": "ht_btn"}[mode]
         btn = self._ui.get(btn_key)
         
         if self._scenario.is_executing:
@@ -271,7 +347,7 @@ class OrientationTrajectoryUI:
             return
         
         mode = state["mode"]
-        btn_key = {"euler": "euler_btn", "angle_axis": "aa_btn", "quaternion": "quat_btn"}[mode]
+        btn_key = {"euler": "euler_btn", "angle_axis": "aa_btn", "quaternion": "quat_btn", "ht": "ht_btn"}[mode]
         
         # Update status
         if mode == "euler":
@@ -279,8 +355,13 @@ class OrientationTrajectoryUI:
             self._set_status(f"t={state['time']:.2f}s | ({a[0]:.1f}, {a[1]:.1f}, {a[2]:.1f})")
         elif mode == "angle_axis":
             self._set_status(f"t={state['time']:.2f}s | {np.degrees(state['angle']):.1f}/{np.degrees(state['angle_final']):.1f} deg")
-        else:
+        elif mode == "quaternion":
             self._set_status(f"t={state['time']:.2f}s | s={state['s']:.3f} ({state['interp_type']})")
+        elif mode == "ht":
+            p, rpy = state["pos"], state["rpy"]
+            self._set_status(f"t={state['time']:.2f}s | p=({p[0]:.2f},{p[1]:.2f},{p[2]:.2f})")
+            self._ui["ht_pos"].text = f"pos=({p[0]:.2f},{p[1]:.2f},{p[2]:.2f})"
+            self._ui["ht_rpy"].text = f"rpy=({rpy[0]:.1f},{rpy[1]:.1f},{rpy[2]:.1f})"
         
         # Execution complete
         if not self._scenario.is_executing:
@@ -288,7 +369,8 @@ class OrientationTrajectoryUI:
             if btn := self._ui.get(btn_key):
                 btn.text = "Execute"
                 btn.set_style({"background_color": 0xFF006600})
-            self._set_status(f"[{mode.replace('_', '-').title()}] Done!")
+            mode_name = {"euler": "Euler", "angle_axis": "Angle-Axis", "quaternion": "Quaternion", "ht": "HT"}
+            self._set_status(f"[{mode_name.get(mode, mode)}] Done!")
 
     # ─────────────────────────────────────────────────────────────────────────
     # Label Updates
@@ -310,3 +392,10 @@ class OrientationTrajectoryUI:
         qi, qf = self._scenario.rot2quat(Ri), self._scenario.rot2quat(Rf)
         self._ui["qi"].text = f"Qi=({qi[0]:.2f},{qi[1]:.2f},{qi[2]:.2f},{qi[3]:.2f})"
         self._ui["qf"].text = f"Qf=({qf[0]:.2f},{qf[1]:.2f},{qf[2]:.2f},{qf[3]:.2f})"
+
+    def _update_ht_labels(self):
+        T1 = self._scenario.get_T1()
+        p = self._scenario.t2p(T1)
+        rpy = [np.degrees(a) for a in self._scenario.tr2rpy(T1)]
+        self._ui["ht_pos"].text = f"pos=({p[0]:.2f},{p[1]:.2f},{p[2]:.2f})"
+        self._ui["ht_rpy"].text = f"rpy=({rpy[0]:.1f},{rpy[1]:.1f},{rpy[2]:.1f})"

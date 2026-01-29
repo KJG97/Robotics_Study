@@ -191,6 +191,68 @@ def slerp(q0: np.ndarray, q1: np.ndarray, t: float) -> np.ndarray:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Homogeneous Transform Utilities
+# ═══════════════════════════════════════════════════════════════════════════════
+def transl(x: float, y: float, z: float) -> np.ndarray:
+    """Create translation homogeneous transform."""
+    T = np.eye(4)
+    T[:3, 3] = [x, y, z]
+    return T
+
+def trotx(a: float) -> np.ndarray:
+    """Create rotation about X-axis homogeneous transform."""
+    T = np.eye(4)
+    T[:3, :3] = rotx(a)
+    return T
+
+def troty(a: float) -> np.ndarray:
+    """Create rotation about Y-axis homogeneous transform."""
+    T = np.eye(4)
+    T[:3, :3] = roty(a)
+    return T
+
+def trotz(a: float) -> np.ndarray:
+    """Create rotation about Z-axis homogeneous transform."""
+    T = np.eye(4)
+    T[:3, :3] = rotz(a)
+    return T
+
+def t2r(T: np.ndarray) -> np.ndarray:
+    """Extract rotation matrix from homogeneous transform."""
+    return T[:3, :3].copy()
+
+def t2p(T: np.ndarray) -> np.ndarray:
+    """Extract position from homogeneous transform."""
+    return T[:3, 3].copy()
+
+def tr2rpy(T: np.ndarray) -> Tuple[float, float, float]:
+    """Extract RPY angles from transform (XYZ convention). Accepts 4x4 HT or 3x3 R."""
+    R = t2r(T) if T.shape == (4, 4) else T
+    return rot2euler_xyz(R)
+
+def trinterp(T1: np.ndarray, T2: np.ndarray, s: float) -> np.ndarray:
+    """
+    Interpolate between two homogeneous transforms.
+    Position: linear interpolation
+    Orientation: SLERP
+    """
+    # Position interpolation
+    p1, p2 = t2p(T1), t2p(T2)
+    p = p1 + s * (p2 - p1)
+    
+    # Orientation interpolation (SLERP)
+    q1, q2 = rot2quat(t2r(T1)), rot2quat(t2r(T2))
+    q = slerp(q1, q2, s)
+    R = quat2rot(q)
+    
+    # Combine
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = p
+    return T
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Main Scenario Class
 # ═══════════════════════════════════════════════════════════════════════════════
 class OrientationTrajectoryScenario:
@@ -226,6 +288,10 @@ class OrientationTrajectoryScenario:
         self._quat_i, self._quat_f = np.array([1.0, 0.0, 0.0, 0.0]), np.array([1.0, 0.0, 0.0, 0.0])
         self._quat_interp = "linspace"
         self._s_traj = None
+        
+        # HT trajectory
+        self._T1, self._T2 = np.eye(4), np.eye(4)
+        self._ht_interp = "ctraj"
 
     # ─────────────────────────────────────────────────────────────────────────
     # Properties
@@ -240,7 +306,8 @@ class OrientationTrajectoryScenario:
 
     @property
     def trajectory_duration(self) -> float:
-        traj = {"euler": self._euler_traj, "angle_axis": self._angle_traj, "quaternion": self._s_traj}
+        traj = {"euler": self._euler_traj, "angle_axis": self._angle_traj, 
+                "quaternion": self._s_traj, "ht": self._s_traj}
         return self._tf if traj.get(self._mode) else 0.0
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -343,14 +410,56 @@ class OrientationTrajectoryScenario:
         self._elapsed = 0.0
         return {"success": True, "interp_type": interp, "n": n if interp == "jtraj" else None}
 
+    def set_T1(self, px: float, py: float, pz: float, rx: float, ry: float, rz: float):
+        """Set T1 = transl(px,py,pz) * trotx(rx) * troty(ry) * trotz(rz)"""
+        self._T1 = transl(px, py, pz) @ trotx(np.radians(rx)) @ troty(np.radians(ry)) @ trotz(np.radians(rz))
+
+    def set_T2(self, px: float, py: float, pz: float, rx: float, ry: float, rz: float):
+        """Set T2 = transl(px,py,pz) * trotx(rx) * troty(ry) * trotz(rz)"""
+        self._T2 = transl(px, py, pz) @ trotx(np.radians(rx)) @ troty(np.radians(ry)) @ trotz(np.radians(rz))
+
+    def get_T1(self) -> np.ndarray:
+        return self._T1.copy()
+
+    def get_T2(self) -> np.ndarray:
+        return self._T2.copy()
+
+    def generate_ht_trajectory(self, tf: float = 5.0, interp: str = "ctraj", n: float = 3.0) -> dict:
+        """
+        Generate HT (Homogeneous Transform) trajectory.
+        Position: linear interpolation
+        Orientation: SLERP
+        s parameter: ctraj (trapezoidal) or jtraj (S-curve)
+        """
+        if tf <= 0:
+            return {"success": False, "message": "tf must be > 0"}
+        
+        self._tf, self._mode, self._ht_interp = tf, "ht", interp
+        
+        # s trajectory for interpolation parameter
+        traj_map = {
+            "linspace": LinearTrajectory,
+            "jtraj": lambda q0, qf, tf: SmoothTrajectory(q0, qf, tf, n),
+            "ctraj": TrapezoidalTrajectory,
+        }
+        self._s_traj = traj_map.get(interp, TrapezoidalTrajectory)(0.0, 1.0, tf)
+        self._elapsed = 0.0
+        
+        return {"success": True, "interp_type": interp}
+
     # ─────────────────────────────────────────────────────────────────────────
     # Execution
     # ─────────────────────────────────────────────────────────────────────────
     def start_execution(self):
-        traj = {"euler": self._euler_traj, "angle_axis": self._angle_traj, "quaternion": self._s_traj}
+        traj = {"euler": self._euler_traj, "angle_axis": self._angle_traj, 
+                "quaternion": self._s_traj, "ht": self._s_traj}
         if not traj.get(self._mode):
             return
-        self._apply_rotation(self._Ri)
+        
+        if self._mode == "ht":
+            self._apply_transform(self._T1)
+        else:
+            self._apply_rotation(self._Ri)
         self.clear_debug_draw()
         self._is_executing, self._elapsed = True, 0.0
 
@@ -372,18 +481,44 @@ class OrientationTrajectoryScenario:
         if self._elapsed >= self._tf:
             self._is_executing = False
         
-        # Compute rotation
+        # Compute rotation/transform based on mode
         if self._mode == "euler" and self._euler_traj:
             R = eul2r(*[t(self._elapsed) for t in self._euler_traj])
+            self._apply_rotation(R)
         elif self._mode == "angle_axis" and self._angle_traj:
             R = self._Ri @ angvec2r(self._angle_traj(self._elapsed), self._axis)
+            self._apply_rotation(R)
         elif self._mode == "quaternion" and self._s_traj:
             R = quat2rot(slerp(self._quat_i, self._quat_f, self._s_traj(self._elapsed)))
+            self._apply_rotation(R)
+        elif self._mode == "ht" and self._s_traj:
+            s = self._s_traj(self._elapsed)
+            T = trinterp(self._T1, self._T2, s)
+            self._apply_transform(T)
         else:
             return
         
-        self._apply_rotation(R)
         self._draw_tips()
+
+    def _apply_transform(self, T: np.ndarray):
+        """Apply homogeneous transform to XYZ prim."""
+        stage = get_current_stage()
+        if not stage or not self._xyz_prim:
+            return
+        prim = stage.GetPrimAtPath(self.XYZ_PRIM_PATH)
+        if not prim.IsValid():
+            return
+        
+        xform = UsdGeom.Xformable(prim)
+        xform.ClearXformOpOrder()
+        
+        # Position from T
+        p = t2p(T)
+        xform.AddTranslateOp().Set(Gf.Vec3d(float(p[0]), float(p[1]), float(p[2])))
+        
+        # Rotation from T
+        r, pitch, y = rot2euler_xyz(t2r(T))
+        xform.AddRotateXYZOp().Set(Gf.Vec3f(np.degrees(r), np.degrees(pitch), np.degrees(y)))
 
     def _draw_tips(self):
         try:
@@ -410,6 +545,12 @@ class OrientationTrajectoryScenario:
         elif self._mode == "quaternion" and self._s_traj:
             return {"mode": "quaternion", "time": self._elapsed, 
                     "s": self._s_traj(self._elapsed), "interp_type": self._quat_interp}
+        elif self._mode == "ht" and self._s_traj:
+            s = self._s_traj(self._elapsed)
+            T = trinterp(self._T1, self._T2, s)
+            rpy = tr2rpy(T)
+            return {"mode": "ht", "time": self._elapsed, "s": s, "interp_type": self._ht_interp,
+                    "pos": t2p(T).tolist(), "rpy": [np.degrees(a) for a in rpy]}
         return None
 
     # Static method aliases for external access
@@ -419,3 +560,7 @@ class OrientationTrajectoryScenario:
     def tr2angvec(R): return tr2angvec(R)
     @staticmethod
     def rot2quat(R): return rot2quat(R)
+    @staticmethod
+    def t2p(T): return t2p(T)
+    @staticmethod
+    def tr2rpy(T): return tr2rpy(T)
