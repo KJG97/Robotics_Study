@@ -15,7 +15,7 @@ from isaacsim.gui.components.ui_utils import get_style
 from omni.usd import StageEventType
 from pxr import Sdf, UsdLux
 
-from .assignments import Assignment1UI
+from .assignments import Assignment1UI, Assignment2UI
 from .tutorial import TutorialUI
 from .forward import ForwardKinematicsUI
 from .inverse import InverseKinematicsUI
@@ -36,6 +36,7 @@ class UIBuilder:
         
         self._timeline = omni.timeline.get_timeline_interface()
         self._assignment1_ui = Assignment1UI()
+        self._assignment2_ui = Assignment2UI()
         self._tutorial_ui = TutorialUI()
         self._forward_ui = ForwardKinematicsUI()
         self._inverse_ui = InverseKinematicsUI()
@@ -73,6 +74,7 @@ class UIBuilder:
 
     def cleanup(self):
         self._assignment1_ui.cleanup()
+        self._assignment2_ui.cleanup()
         self._tutorial_ui.teardown()
         self._forward_ui.teardown()
         self._inverse_ui.teardown()
@@ -181,7 +183,12 @@ class UIBuilder:
         """Build Assignment1 UI in the given window."""
         self._assignment1_ui.build_ui(window)
         self.wrapped_ui_elements.extend(self._assignment1_ui.wrapped_ui_elements)
-    
+
+    def build_assignment2_ui(self, window):
+        """Build Assignment2 UI in the given window."""
+        self._assignment2_ui.build_ui(window)
+        self.wrapped_ui_elements.extend(self._assignment2_ui.wrapped_ui_elements)
+
     def update_assignment1_animation(self, step: float):
         """Update Assignment1 animation."""
         self._assignment1_ui.update_animation(step)

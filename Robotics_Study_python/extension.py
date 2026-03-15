@@ -64,17 +64,24 @@ class Extension(omni.ext.IExt):
 
         # Build Assignment Windows
         self._assignment_windows = {}
-        self._assignment1_ui_built = False  # Flag to track if UI has been built
-        
+        self._assignment1_ui_built = False
+        self._assignment2_ui_built = False
+
         # Assignment1 window with LOAD button
         assignment1_window = ScrollingWindow(
             title=ASSIGNMENT1_TITLE, width=400, height=300, visible=False, dockPreference=ui.DockPreference.LEFT_BOTTOM
         )
         self._assignment_windows[ASSIGNMENT1_TITLE] = assignment1_window
-        
+
+        # Assignment2 window with LOAD ALLEX button
+        assignment2_window = ScrollingWindow(
+            title=ASSIGNMENT2_TITLE, width=400, height=300, visible=False, dockPreference=ui.DockPreference.LEFT_BOTTOM
+        )
+        self._assignment_windows[ASSIGNMENT2_TITLE] = assignment2_window
+
         # Other assignment windows (empty)
         empty_assignment_titles = [
-            ASSIGNMENT2_TITLE, ASSIGNMENT3_TITLE, ASSIGNMENT4_TITLE, ASSIGNMENT5_TITLE
+            ASSIGNMENT3_TITLE, ASSIGNMENT4_TITLE, ASSIGNMENT5_TITLE
         ]
         for title in empty_assignment_titles:
             window = ScrollingWindow(
@@ -166,7 +173,8 @@ class Extension(omni.ext.IExt):
                     window.visible = False
             self._assignment_windows = {}
         self._assignment1_ui_built = False
-        
+        self._assignment2_ui_built = False
+
         self.ui_builder.cleanup()
         gc.collect()
 
@@ -232,7 +240,12 @@ class Extension(omni.ext.IExt):
         """Toggle Assignment2 window visibility"""
         window = self._assignment_windows.get(ASSIGNMENT2_TITLE)
         if window:
+            if not self._assignment2_ui_built:
+                self.ui_builder.build_assignment2_ui(window)
+                self._assignment2_ui_built = True
             window.visible = not window.visible
+            if window.visible:
+                self._setup_event_subscriptions()
 
     def _assignment3_callback(self):
         """Toggle Assignment3 window visibility"""
